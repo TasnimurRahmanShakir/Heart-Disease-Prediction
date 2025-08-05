@@ -1,0 +1,13 @@
+# Environment folder
+venv/
+
+__pycache__/
+*.pyc
+
+env/
+.env
+
+# Backend image uploads
+Backend/images/
+
+# Frontend test/demo files
