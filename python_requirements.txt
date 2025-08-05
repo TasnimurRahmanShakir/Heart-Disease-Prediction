@@ -1,1 +1,6 @@
 Django == 5.2.4
+fastapi == 0.116.1
+uvicorn == 0.35.0
+torch == 2.7.1
+torchvision == 0.22.1
+pydantic == 2.11.7
