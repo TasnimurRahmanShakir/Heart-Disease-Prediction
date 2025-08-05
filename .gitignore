@@ -8,6 +8,10 @@ env/
 .env
 
 # Backend image uploads
-Backend/images/
+Backend/static/
 
 # Frontend test/demo files
+
+# Ignore model weights and images
+*.pth
+*.png
