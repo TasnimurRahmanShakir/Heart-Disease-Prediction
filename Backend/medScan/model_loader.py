@@ -1,5 +1,8 @@
 import os
 import torch
+from torchvision import datasets, transforms, models
+import torch.nn as nn
+from torchvision.models import resnet152, ResNet152_Weights
 
 Model = None  # Global model object
 
@@ -9,17 +12,29 @@ def load_model_once():
     if Model is None:
         print("Model is being loaded... This may take a while.")
 
-        # Automatically use GPU if available, else CPU
-        # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # print(f"Using device: {device}")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {device}")
 
-        # model_path = os.path.join('static', 'models', 'your_model.pth')
-        # Model = torch.load(model_path, map_location=device)
-        # Model.to(device)
-        # Model.eval()
 
-        print("✅ Model loaded at startup.")
-        return Model
+        weights = ResNet152_Weights.DEFAULT
+        model = resnet152(weights=weights)
+
+        model.fc = nn.Linear(model.fc.in_features, 1)
+
+       
+        model_path = os.path.join("static", "model", "best_resnet152_binary.pth")
+
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"❌ Model file not found at: {model_path}")
+
+        # Load state dict
+        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.to(device)
+        model.eval()  # Set to evaluation mode
+
+        Model = model
+        print("✅ Model loaded from .pth file and ready.")
+        return Model 
     else:
         print("Model is already loaded, skipping load.")
         

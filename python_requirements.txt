@@ -4,3 +4,8 @@ uvicorn == 0.35.0
 torch == 2.7.1
 torchvision == 0.22.1
 pydantic == 2.11.7
+python-multipart == 0.0.20
+aiofiles == 24.1.0
+matplotlib == 3.10.5
+sklearn == 1.7.1
+seaborn == 0.13.2
