@@ -8,7 +8,7 @@ env/
 .env
 
 # Backend image uploads
-Backend/static/
+
 
 # Frontend test/demo files
 
