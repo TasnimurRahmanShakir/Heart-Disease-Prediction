@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y build-essential libgl1-mesa-glx && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements.txt from Backend folder and install dependencies
-COPY Backend/requirements.txt .
+COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
