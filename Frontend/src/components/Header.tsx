@@ -18,7 +18,7 @@ const Header: React.FC = () => {
   useEffect(() => {
     const checkModelStatus = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/model/status');
+        const response = await axios.get(' https://heart-disease-prediction-8-xuyq.onrender.com/api/model/status');
         setModelStatus(response.data);
       } catch (error) {
         console.error('Failed to get model status:', error);

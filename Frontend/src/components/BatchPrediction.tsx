@@ -49,7 +49,7 @@ const BatchPrediction: React.FC = () => {
     formData.append('file', selectedFile);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/predict/folder', formData, {
+      const response = await axios.post('https://heart-disease-prediction-8-xuyq.onrender.com/api/predict/folder', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setResult(response.data);
@@ -64,7 +64,7 @@ const BatchPrediction: React.FC = () => {
 
   const handleDownload = (type: 'confusion_matrix' | 'roc_curve' | 'sample_predictions') => {
     if (result) {
-      const url = `http://localhost:8000/api/download/${type}`;
+      const url = `https://heart-disease-prediction-8-xuyq.onrender.com/api/download/${type}`;
       const link = document.createElement('a');
       link.href = url;
       link.download = `${type}.png`;
@@ -75,13 +75,13 @@ const BatchPrediction: React.FC = () => {
   };
 
   const confMatrixUrl = result?.confusion_matrix_path
-    ? `http://localhost:8000/api/download/confusion_matrix`
+    ? `https://heart-disease-prediction-8-xuyq.onrender.com/api/download/confusion_matrix`
     : '';
   const rocCurveUrl = result?.roc_curve_path
-    ? `http://localhost:8000/api/download/roc_curve`
+    ? `https://heart-disease-prediction-8-xuyq.onrender.com/api/download/roc_curve`
     : '';
   const samplePredictionsUrl = result?.sample_predictions_path
-    ? `http://localhost:8000/api/download/sample_predictions`
+    ? `https://heart-disease-prediction-8-xuyq.onrender.com/api/download/sample_predictions`
     : '';
 
   return (

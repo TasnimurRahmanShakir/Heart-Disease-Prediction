@@ -55,7 +55,7 @@ const SingleImagePrediction: React.FC = () => {
     formData.append('file', selectedFile);
 
     try {
-      const response = await axios.post('http://localhost:8000/api/predict/single', formData, {
+      const response = await axios.post(' https://heart-disease-prediction-8-xuyq.onrender.com/api/predict/single', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -126,7 +126,7 @@ const SingleImagePrediction: React.FC = () => {
                   <span 
                     className={`value ${result.prediction === 'Cardiomegaly' ? 'positive' : 'negative'}`}
                   >
-                    {'The scan suggests possible cardiomegaly, which can be linked to heart problems. It is important to follow up with a cardiologist as soon as possible'}
+                    {result.prediction}
                   </span>
                 </div>
                 <div className="confidence">
