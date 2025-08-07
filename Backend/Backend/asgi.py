@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.wsgi import WSGIMiddleware
 from starlette.routing import Mount, Router
-from medScan.views import router as medscan_router
+from medScan.views import router
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Backend.settings')
 
@@ -18,7 +18,7 @@ fastapi_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-fastapi_app.include_router(medscan_router)
+fastapi_app.include_router(router, tags=["medScan"])
 
 application = Router(
     routes=[
