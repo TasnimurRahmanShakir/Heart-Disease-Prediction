@@ -1,26 +1,25 @@
-# Use official Python slim image
 FROM python:3.11-slim
 
-# Set working directory inside container
-WORKDIR /app/Backend
+# Set working directory inside the container
+WORKDIR /app
 
-# Install system dependencies needed for PyTorch and image processing
-RUN apt-get update && apt-get install -y build-essential libgl1-mesa-glx && rm -rf /var/lib/apt/lists/*
+# Install system dependencies (needed for PyTorch and image processing)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libgl1-mesa-glx \
+ && rm -rf /var/lib/apt/lists/*
 
-# Copy only requirements.txt from Backend folder to install dependencies
-COPY requirements.txt .
+# Copy the Backend directory into the container at /app
+COPY . /app
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy entire Backend folder contents into /app inside container
-COPY  .
-
-# Set environment variable for Django settings
+# Set environment variable for Django
 ENV DJANGO_SETTINGS_MODULE=Backend.settings
 
-# Expose port 8000 (for uvicorn)
+# Expose port
 EXPOSE 8000
 
-# Run your ASGI app with uvicorn
+# Run using uvicorn (FastAPI via ASGI)
 CMD ["uvicorn", "Backend.asgi:application", "--host", "0.0.0.0", "--port", "8000"]
