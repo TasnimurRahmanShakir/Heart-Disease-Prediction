@@ -1,4 +1,6 @@
 from fastapi import APIRouter, UploadFile, File
+from fastapi.responses import FileResponse
+import os
 from medScan.model_loader import get_model  # Assuming this function loads your model
 from PIL import Image
 import io
@@ -19,7 +21,11 @@ from medScan.preprocessing import FilteredBinaryDataset
 router = APIRouter()
 
 
-
+@router.get("/model/status")
+async def model_status():
+    return{
+        "trained_model_loaded": "Model is loaded and ready for predictions."
+    }
 
 @router.post("/predict/single")
 async def predict_single(file: UploadFile = File(...)):
@@ -116,7 +122,7 @@ async def predict_folder(file: UploadFile = File(...)):
         plt.ylabel('True')
         plt.title('Confusion Matrix')
         plt.savefig('confusion_matrix.png')   # Save PNG file
-        plt.show()
+        # plt.show()
 
         # --- Classification Report ---
         print("Classification Report:")
@@ -133,7 +139,7 @@ async def predict_folder(file: UploadFile = File(...)):
         plt.title('Receiver Operating Characteristic (ROC)')
         plt.legend(loc='lower right')
         plt.savefig('roc_curve.png')  # Save PNG file
-        plt.show()
+        # plt.show()
 
         # --- Visualization of some predictions with images ---
         def imshow(img_tensor, title=None):
@@ -155,20 +161,39 @@ async def predict_folder(file: UploadFile = File(...)):
             pred_prob = all_probs[i]
             title = f"T: {class_names[true_label]}\nP: {class_names[pred_label]} ({pred_prob:.2f})"
 
-            plt.subplot(2, 4, i + 1)
+            plt.subplot(2, 4, i+1)
             imshow(image_tensor, title=title)
         plt.tight_layout()
         plt.savefig('sample_predictions.png')  # Save PNG file
-        plt.show()
+        # plt.show()
 
         return {
-            'roc_auc': roc_auc,
+            'total_images': len(all_labels),
+            'positive_cases': int(np.sum(np.array(all_preds))),
+            'negative_cases': int(len(all_preds) - np.sum(np.array(all_preds))),
+            'confusion_matrix_path': 'confusion_matrix.png' if os.path.exists('confusion_matrix.png') else None,
+            'roc_curve_path': 'roc_curve.png' if os.path.exists('roc_curve.png') else None,
+            'sample_predictions_path': 'sample_predictions.png' if os.path.exists('sample_predictions.png') else None,
             'classification_report': report,
-            'confusion_matrix_img': 'confusion_matrix.png',
-            'roc_curve_img': 'roc_curve.png' if roc_auc is not None else None,
-            'sample_predictions_img': 'sample_predictions.png'
+            'roc_auc': round(roc_auc, 4)
         }
+
+
         
     except Exception as e:
         print(f"Error: {e}")
         return {"status": "error", "detail": str(e)}
+
+
+@router.get("/download/{file_type}")
+def download_file(file_type: str):
+    file_map = {
+        "confusion_matrix": "confusion_matrix.png",
+        "roc_curve": "roc_curve.png",
+        "sample_predictions": "sample_predictions.png"
+    }
+    file_path = file_map.get(file_type)
+
+    if file_path and os.path.exists(file_path):
+        return FileResponse(path=file_path, filename=os.path.basename(file_path), media_type='image/png')
+    return {"error": "File not found"}
