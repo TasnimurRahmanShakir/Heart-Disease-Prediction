@@ -1,10 +1,15 @@
 import os
+import sys
+
+# Add the Backend folder to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from django.core.wsgi import get_wsgi_application
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.wsgi import WSGIMiddleware
 from starlette.routing import Mount, Router
-from ..medScan.views import router
+from medScan.views import router
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Backend.settings')
 
