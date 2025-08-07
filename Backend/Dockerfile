@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy entire Backend folder contents into /app inside container
-COPY  .
+COPY  ./Backend
 
 # Set environment variable for Django settings
 ENV DJANGO_SETTINGS_MODULE=Backend.settings
