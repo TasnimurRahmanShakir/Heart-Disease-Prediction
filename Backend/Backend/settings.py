@@ -26,7 +26,12 @@ SECRET_KEY = 'django-insecure-$p9$mtf5n%iy$78)l2986l2q^x30og^be1(3--tnbhdf-df1fn
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "heart-disease-prediction-8-xuyq.onrender.com"
+]
+
 
 STATIC_URL = '/static/'
 
