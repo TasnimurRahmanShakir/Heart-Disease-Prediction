@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.wsgi import WSGIMiddleware
 from starlette.routing import Mount, Router
-from medScan.views import router
+from ..medScan.views import router
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Backend.settings')
 
