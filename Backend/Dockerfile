@@ -8,13 +8,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y build-essential libgl1-mesa-glx && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements.txt from Backend folder to install dependencies
-COPY Backend/requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy entire Backend folder contents into /app inside container
-COPY Backend/ .
+COPY  .
 
 # Set environment variable for Django settings
 ENV DJANGO_SETTINGS_MODULE=Backend.settings
