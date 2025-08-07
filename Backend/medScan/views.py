@@ -1,5 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, UploadFile, File
 from medScan.model_loader import get_model  # Assuming this function loads your model
 from PIL import Image
 import io
@@ -8,24 +7,18 @@ import zipfile
 import tempfile
 import os
 import aiofiles 
-from fastapi.responses import FileResponse
+from torch.utils.data import DataLoader
 from torchvision import transforms
 from PIL import Image 
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, roc_curve, auc, classification_report
 import seaborn as sns
 import numpy as np
-
+from medScan.preprocessing import FilteredBinaryDataset
 
 router = APIRouter()
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ColorJitter(brightness=0.2, contrast=0.2),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406],
-                         [0.229, 0.224, 0.225])
-])
+
 
 
 @router.post("/predict/single")
@@ -33,24 +26,35 @@ async def predict_single(file: UploadFile = File(...)):
     print("Received file:", file.filename)
     print("Content type:", file.content_type)
 
+    # Read and convert the image
     contents = await file.read()
     image = Image.open(io.BytesIO(contents)).convert("RGB")
-    
+
+    # Define transform (same as training)
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406],
+                             [0.229, 0.224, 0.225])
+    ])
+
+    # Transform image
+    tensor_image = transform(image)
+    assert isinstance(tensor_image, torch.Tensor), "Transform did not return a tensor"
+    image_tensor = tensor_image.unsqueeze(0)  # Add batch dimension
+
+    # Load model and make prediction
     model = get_model()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # Apply same preprocessing as during training
-    tensor_image = transform(image)
-    print("Transformed image type:", type(tensor_image))
-    assert isinstance(tensor_image, torch.Tensor), "Transform did not return a tensor"
-    image = tensor_image.unsqueeze(0).to(device) 
+    model = model.to(device)
+    image_tensor = image_tensor.to(device)
 
     with torch.no_grad():
-        output = model(image)
+        output = model(image_tensor)
         prob = torch.sigmoid(output).item()
         prediction = 1 if prob > 0.5 else 0
-    
-    # Return both prediction and confidence
+
+    # Return result
     return {
         "prediction": "Cardiomegaly" if prediction == 1 else "No Finding",
         "confidence": round(prob, 4)
@@ -59,16 +63,6 @@ async def predict_single(file: UploadFile = File(...)):
 
 
 
-def predict_image(model, device, image_path):
-    image = Image.open(image_path).convert("RGB")
-    tensor_image = transform(image)
-    print("Transformed image type:", type(tensor_image))
-    assert isinstance(tensor_image, torch.Tensor), "Transform did not return a tensor"
-    image = tensor_image.unsqueeze(0).to(device) 
-    with torch.no_grad():
-        output = model(image)
-        prob = torch.sigmoid(output).item()
-        return 1 if prob >= 0.5 else 0 
     
 @router.post("/predict/folder")
 async def predict_folder(file: UploadFile = File(...)):
@@ -91,99 +85,88 @@ async def predict_folder(file: UploadFile = File(...)):
             extracted_files = zip_ref.namelist()
             print(f"Extracted files: {extracted_files}")
 
-        image_paths = []
-        labels = []
-        y_true = []
-        y_pred = []
-        y_prob = []
-        class_map = {'Cardiomegaly': 1, 'No Finding': 0}
-        for class_name in os.listdir(temp_dir):
-            if class_name not in class_map:
-                continue
-            class_dir = os.path.join(temp_dir, class_name)
-            if not os.path.isdir(class_dir):
-                continue
-            for fname in os.listdir(class_dir):
-                if fname.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    image_paths.append(os.path.join(class_dir, fname))
-                    labels.append(class_map[class_name])
+         # Change to your validation/test folder path
+        val_dataset = FilteredBinaryDataset(temp_dir)
+        val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
+        
+        class_names = ['No Finding', 'Cardiomegaly']
 
-        if not image_paths:
-            print("No images found after extraction.")
-            return {"status": "error", "detail": "No images found in the uploaded zip file."}
+        # --- Run inference on the validation set ---
+        all_labels = []
+        all_preds = []
+        all_probs = []
+        all_paths = []
 
-        model.eval()
         with torch.no_grad():
-            for img_path, label in zip(image_paths, labels):
-                try:
-                    img = Image.open(img_path).convert('RGB')
-                except Exception as img_e:
-                    print(f"Failed to open image {img_path}: {img_e}")
-                    continue
-                tensor = transform(img)
-                if not isinstance(tensor, torch.Tensor):
-                    print(f"Transform did not return a tensor for {img_path}")
-                    continue
-                img = tensor.unsqueeze(0).to(device)
-                output = model(img)
-                prob = torch.sigmoid(output).item()
-                pred = 1 if prob > 0.5 else 0
-                y_true.append(label)
-                y_pred.append(pred)
-                y_prob.append(prob)
+            for images, labels, paths in val_loader:
+                images = images.to(device)
+                outputs = model(images)
+                probs = torch.sigmoid(outputs).squeeze().cpu().numpy()
+                preds = (probs > 0.5).astype(int)
 
-        if not y_true or not y_pred:
-            print("No valid predictions made.")
-            return {"status": "error", "detail": "No valid images for prediction."}
-
-        acc = np.mean(np.array(y_true) == np.array(y_pred))
-        print(f'Accuracy: {acc:.4f}')
-
-        # Confusion Matrix
-        cm = confusion_matrix(y_true, y_pred)
-        plt.figure(figsize=(4,4))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Cardiomegaly','No Finding'], yticklabels=['Cardiomegaly','No Finding'])
+                all_labels.extend(labels.numpy())
+                all_preds.extend(preds)
+                all_probs.extend(probs)
+                all_paths.extend(paths)
+                
+        cm = confusion_matrix(all_labels, all_preds)
+        plt.figure(figsize=(6,5))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
         plt.xlabel('Predicted')
         plt.ylabel('True')
         plt.title('Confusion Matrix')
+        plt.savefig('confusion_matrix.png')   # Save PNG file
+        plt.show()
+
+        # --- Classification Report ---
+        print("Classification Report:")
+        report = classification_report(all_labels, all_preds, target_names=class_names)
+        # --- ROC Curve & AUC ---
+        fpr, tpr, _ = roc_curve(all_labels, all_probs)
+        roc_auc = auc(fpr, tpr)
+
+        plt.figure(figsize=(7,6))
+        plt.plot(fpr, tpr, label=f'ROC curve (AUC = {roc_auc:.4f})')
+        plt.plot([0, 1], [0, 1], 'k--', label='Random guess')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver Operating Characteristic (ROC)')
+        plt.legend(loc='lower right')
+        plt.savefig('roc_curve.png')  # Save PNG file
+        plt.show()
+
+        # --- Visualization of some predictions with images ---
+        def imshow(img_tensor, title=None):
+            img = img_tensor.cpu().numpy().transpose((1, 2, 0))
+            mean = np.array([0.485, 0.456, 0.406])
+            std = np.array([0.229, 0.224, 0.225])
+            img = std * img + mean  # unnormalize
+            img = np.clip(img, 0, 1)
+            plt.imshow(img)
+            if title:
+                plt.title(title)
+            plt.axis('off')
+
+        num_images = 8
+        plt.figure(figsize=(16, 6))
+        for i in range(num_images):
+            image_tensor, true_label, img_path = val_dataset[i]
+            pred_label = all_preds[i]
+            pred_prob = all_probs[i]
+            title = f"T: {class_names[true_label]}\nP: {class_names[pred_label]} ({pred_prob:.2f})"
+
+            plt.subplot(2, 4, i + 1)
+            imshow(image_tensor, title=title)
         plt.tight_layout()
-        plt.savefig('confusion_matrix.png')
-        plt.close()
-
-        # ROC Curve & AUC
-        try:
-            fpr, tpr, _ = roc_curve(y_true, y_prob)
-            roc_auc = auc(fpr, tpr)
-            plt.figure()
-            plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
-            plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-            plt.xlim([0.0, 1.0])
-            plt.ylim([0.0, 1.05])
-            plt.xlabel('False Positive Rate')
-            plt.ylabel('True Positive Rate')
-            plt.title('Receiver Operating Characteristic')
-            plt.legend(loc='lower right')
-            plt.tight_layout()
-            plt.savefig('roc_curve.png')
-            plt.close()
-        except Exception as roc_e:
-            print(f"ROC/AUC calculation failed: {roc_e}")
-            roc_auc = None
-
-        # Classification Report
-        try:
-            report = classification_report(y_true, y_pred, target_names=['Cardiomegaly','No Finding'])
-        except Exception as rep_e:
-            print(f"Classification report failed: {rep_e}")
-            report = str(rep_e)
+        plt.savefig('sample_predictions.png')  # Save PNG file
+        plt.show()
 
         return {
-            'accuracy': acc,
-            'confusion_matrix': cm.tolist(),
             'roc_auc': roc_auc,
             'classification_report': report,
             'confusion_matrix_img': 'confusion_matrix.png',
-            'roc_curve_img': 'roc_curve.png' if roc_auc is not None else None
+            'roc_curve_img': 'roc_curve.png' if roc_auc is not None else None,
+            'sample_predictions_img': 'sample_predictions.png'
         }
         
     except Exception as e:

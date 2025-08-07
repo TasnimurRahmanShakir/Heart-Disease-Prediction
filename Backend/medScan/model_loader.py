@@ -1,8 +1,7 @@
 import os
 import torch
-from torchvision import datasets, transforms, models
+from torchvision import models
 import torch.nn as nn
-from torchvision.models import resnet152, ResNet152_Weights
 
 Model = None  # Global model object
 
@@ -11,25 +10,21 @@ def load_model_once():
 
     if Model is None:
         print("Model is being loaded... This may take a while.")
-
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {device}")
-
-
-        weights = ResNet152_Weights.DEFAULT
-        model = resnet152(weights=weights)
-
-        model.fc = nn.Linear(model.fc.in_features, 1)
+        model = models.resnet18(pretrained=False)
+        model.fc = torch.nn.Linear(model.fc.in_features, 1)
+        model_path = os.path.join("static", "model", "resnet18_binary_cardiomegaly.pth")
+        
 
        
-        model_path = os.path.join("static", "model", "best_resnet152_binary.pth")
+        
 
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"❌ Model file not found at: {model_path}")
 
         # Load state dict
         model.load_state_dict(torch.load(model_path, map_location=device))
-        model.to(device)
+        model = model.to(device)
         model.eval()  # Set to evaluation mode
 
         Model = model
