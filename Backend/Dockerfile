@@ -2,7 +2,7 @@
 FROM python:3.11-slim
 
 # Set working directory inside container
-WORKDIR /app
+WORKDIR /app/Backend
 
 # Install system dependencies needed for PyTorch and image processing
 RUN apt-get update && apt-get install -y build-essential libgl1-mesa-glx && rm -rf /var/lib/apt/lists/*
@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy entire Backend folder contents into /app inside container
-COPY  ./Backend
+COPY  .
 
 # Set environment variable for Django settings
 ENV DJANGO_SETTINGS_MODULE=Backend.settings
