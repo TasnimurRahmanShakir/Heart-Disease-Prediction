@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
-WORKDIR /app
+WORKDIR /app/Backend
+
 
 # Install system dependencies needed for PyTorch and image processing
 RUN apt-get update && apt-get install -y build-essential libgl1-mesa-glx && rm -rf /var/lib/apt/lists/*
