@@ -94,7 +94,7 @@ async def predict_folder(file: UploadFile = File(...)):
 
          # Change to your validation/test folder path
         val_dataset = FilteredBinaryDataset(temp_dir)
-        val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
+        val_loader = DataLoader(val_dataset, batch_size=6, shuffle=False)
         
         class_names = ['No Finding', 'Cardiomegaly']
 
