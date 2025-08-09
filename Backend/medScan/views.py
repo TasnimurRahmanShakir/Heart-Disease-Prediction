@@ -124,6 +124,7 @@ async def predict_folder(file: UploadFile = File(...)):
         plt.title('Confusion Matrix')
         plt.savefig('confusion_matrix.png')   # Save PNG file
         # plt.show()
+        plt.close()
 
         # --- Classification Report ---
         print("Classification Report:")
@@ -141,6 +142,7 @@ async def predict_folder(file: UploadFile = File(...)):
         plt.legend(loc='lower right')
         plt.savefig('roc_curve.png')  # Save PNG file
         # plt.show()
+        plt.close()
 
         # --- Visualization of some predictions with images ---
         def imshow(img_tensor, title=None):
@@ -167,6 +169,7 @@ async def predict_folder(file: UploadFile = File(...)):
         plt.tight_layout()
         plt.savefig('sample_predictions.png')  # Save PNG file
         # plt.show()
+        plt.close()
 
         return {
             'total_images': len(all_labels),
